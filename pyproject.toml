@@ -1,0 +1,14 @@
+[project]
+name = "02-bd-section"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "bs4>=0.0.2",
+    "httpx>=0.28.1",
+    "pandas>=3.0.3",
+    "pdfplumber>=0.11.9",
+    "sqlalchemy>=2.0.50",
+]

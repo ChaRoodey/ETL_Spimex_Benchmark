@@ -14,6 +14,6 @@ async def create_tables() -> None:
     logger.info("Initializing database")
 
     async with async_engine.begin() as conn:
-        await conn.execute_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
 
         logging.info("Database initialized")

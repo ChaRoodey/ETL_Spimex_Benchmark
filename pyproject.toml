@@ -16,4 +16,5 @@ dependencies = [
     "rich>=15.0.0",
     "sqlalchemy>=2.0.50",
     "typer>=0.26.8",
+    "xlrd>=2.0.2",
 ]

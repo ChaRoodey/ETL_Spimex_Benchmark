@@ -1,60 +1,85 @@
-## SPIMEX ETL Parser
+# SPIMEX ETL Parser
 
 ETL-пайплайн для загрузки и обработки бюллетеней торгов биржи SPIMEX с сохранением данных в PostgreSQL.
 
-## Возможности
+Пайплайн реализован в двух вариантах:
+- Sync (последовательный)
+- Async (параллельный)
 
-- Асинхронная загрузка файлов (httpx, asyncio)  
-- Поддержка PDF и Excel бюллетеней  
-- Парсинг таблиц с единицей измерения «Метрическая тонна»  
-- Фильтрация записей с количеством договоров > 0  
-- Сохранение результатов в PostgreSQL через SQLAlchemy  
-- Логирование и обработка ошибок  
-- Ограничение RPS для обхода rate limiting  
+---
+
+## Архитектура пайплайна
+
+Последовательность обработки данных:
+
+- Download (загрузка файлов)
+- Parse (парсинг PDF/Excel)
+- Save (сохранение в PostgreSQL)
+
+---
 
 ## Стек технологий
 
 - Python 3.14  
-- uv  
-- asyncio  
-- httpx  
-- pandas  
-- pdfplumber  
-- SQLAlchemy  
-- PostgreSQL  
+- asyncpg
+- psycopg3 
+- SQLAlchemy 2.x
+- asyncpg / SQLAlchemy async
+- httpx
+- asyncio
+- pandas
+- pdfplumber
+- xlrd
+- BeautifulSoup4 
+- pydantic
+- pydantic-settings
+- typer 
+- rich 
 
-## Установка
+---
 
-Создайте и настройте базу данных PostgreSQL.
+## Сравнение Sync vs Async
 
-Параметры подключения к БД задаются в файле:
+| Этап            | Sync     | Async    | Speedup |
+|----------------|----------|----------|---------|
+| Download files  | 49.78s   | 20.79s   | 2.39x   |
+| Parse data      | 2.27s    | 2.26s    | 1.00x   |
+| Load to DB      | 2.54s    | 1.13s    | 2.25x   |
+| **Total**       | **54.60s** | **24.20s** | **2.26x** |
+
+---
+
+## Быстрый старт (Docker)
+
+### 1. Сборка контейнеров
 
 ```bash
-src/db/async_session.py
+1. docker compose build
+
+2. Конфигурация окружения
+cp .env.example .env
+
+3. Запуск PostgreSQL
+docker compose up -d postgres
+
+4. Инициализация базы данных
+docker compose run --rm backend init-db
+
+5. Запуск
 ```
 
-⚠️ В текущей версии параметры подключения захардкожены и при необходимости должны быть изменены вручную.
-
-Установка зависимостей:
-
+#### Sync:
 ```bash
-uv sync
+docker compose run --rm backend run-sync --pages 10
 ```
 
-## Запуск
-
-Запуск производится из корня проекта:
+#### Async:
 ```bash
-uv run python src/main.py
+docker compose run --rm backend run-async --pages 10
 ```
 
-## Результат выполнения задания
+#### Benchmark:
+```bash
+docker compose run --rm backend benchmark --pages 10
+```
 
-Загружены и обработаны данные SPIMEX начиная с 2023 года.
-
-ETL finished:
-- Time: 578.92 sec
-- PDF files processed: 119
-- Excel files processed: 728
-- Failed to download: 0
-- Rows inserted: 176725

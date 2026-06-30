@@ -37,13 +37,14 @@ class SyncSpimexClient(BaseSpimexClient):
     def get_file_urls(self, pages: int) -> list[str]:
         logger.info("Fetching started: %d pages", pages)
         results = []
-        for page in range(1, pages + 1):
+        for page in range(40, pages + 41):
             results.extend(self._get_url_by_page(page))
 
         return results
 
     def download_file(self, link: str, retries: int = 3) -> bytes | None:
         logger.debug("Downloading file %s", link)
+        time.sleep(0.2)
 
         for attempt in range(retries):
             try:

@@ -24,18 +24,7 @@ class AsyncBulletinService(BaseBulletinService):
             self.metrix.download.time = t()
             self.metrix.download.count = len(files)
 
-        with timer() as t:
-            tasks = [self.process_file(file_data[0], file_data[1]) for file_data in files]
-            results = await asyncio.gather(*tasks)
-
-            bulletins = [
-                bulletin
-                for result in results if result
-                for bulletin in result
-            ]
-
-            self.metrix.parse.time = t()
-            self.metrix.parse.count = len(bulletins)
+        bulletins = self.parse(files)
 
         with timer() as t:
             await self._save_bulletin(bulletins)
@@ -69,63 +58,6 @@ class AsyncBulletinService(BaseBulletinService):
         except Exception:
             logger.exception('Exception occurred while processing file: %s', link)
             return None
-
-    async def process_file(self, link: str, file: bytes) -> list[BulletinModel]:
-        bulletins = []
-        curr_file_ext = ''
-        ext, date = self._extract_data_from_link(link)
-
-        if not ext or not date:
-            logger.info('Failed to extract extension from link %s', link)
-            return []
-
-        if date.year < 2023:
-            return []
-
-        rows = []
-
-        if ext in ("xlsx", "xls"):
-            logger.debug("Parsing Excel file: %s", link)
-
-            rows = await asyncio.to_thread(self.excel_parser.parse, file)
-            await asyncio.sleep(1.5)
-            curr_file_ext = 'excel'
-
-            logger.debug("Done parsing Excel file: %s", link)
-        elif ext == "pdf":
-            logger.debug("Parsing PDF file: %s", link)
-
-            rows = await asyncio.to_thread(self.pdf_parser.parse, file)
-            curr_file_ext = 'pdf'
-
-            logger.debug("Done parsing PDF file: %s", link)
-
-        if not rows:
-            logger.debug("No rows parsed from %s", link)
-            return []
-
-        for row in rows:
-            if str(row[0]).startswith("Итого") or not row:
-                continue
-
-            try:
-                dog_count = int(row[-1])
-            except (TypeError, ValueError):
-                continue
-
-            if dog_count > 0:
-                obj = self.create_bulletin_obj(row, date)
-                if obj:
-                    bulletins.append(obj)
-
-        # if curr_file_ext == 'pdf':
-        #     self.total_pdf_files += 1
-        # elif curr_file_ext == 'excel':
-        #     self.total_excel_files += 1
-
-        return bulletins
-
-        # await self._save_bulletin(bulletins)
 
     async def _save_bulletin(self, bulletins: list[BulletinModel]) -> None:
         if not bulletins:

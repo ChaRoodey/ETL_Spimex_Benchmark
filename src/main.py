@@ -5,13 +5,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from src.core.config import settings
 from src.core.metrix import ETLMetrics, timer
 from src.db.async_session import create_tables
 from src.services.async_bulletin_service import AsyncBulletinService
 from src.services.sync_bulletin_service import SyncBulletinService
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=settings.LOG_LEVEL,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 
@@ -128,8 +129,8 @@ async def execute_async(pages) -> tuple[ETLMetrics, float]:
 
 
 @app.command()
-async def init_db() -> None:
-    await create_tables()
+def init_db() -> None:
+    asyncio.run(create_tables())
 
 
 @app.command()

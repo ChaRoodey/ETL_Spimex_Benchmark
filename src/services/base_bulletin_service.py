@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from src.core.metrix import ETLMetrics
+from src.core.metrix import ETLMetrics, timer
 from src.db.models import BulletinModel
 from src.parsers.excel_parser import ExcelParser
 from src.parsers.pdf_parser import PdfParser
@@ -17,6 +17,75 @@ class BaseBulletinService:
         self.page_amount = page_amount
 
         self.metrix = ETLMetrics()
+
+    def parse(self, files: list[tuple[str, bytes]]) -> list[BulletinModel]:
+        with timer() as t:
+            bulletins = []
+
+            for file_data in files:
+                bulletin = self.process_file(file_data[0], file_data[1])
+
+                if bulletin is not None:
+                    bulletins.extend(bulletin)
+
+            self.metrix.parse.time = t()
+            self.metrix.parse.count = len(bulletins)
+
+        return bulletins
+
+    def process_file(self, link: str, file: bytes) -> list[BulletinModel]:
+        bulletins = []
+        ext, date = self._extract_data_from_link(link)
+
+        if not ext or not date:
+            logger.info('Failed to extract extension from link %s', link)
+            return []
+
+        if date.year < 2023:
+            return []
+
+        rows = []
+
+        if ext in ("xlsx", "xls"):
+            logger.debug("Parsing Excel file: %s", link)
+
+            rows = self.excel_parser.parse(file)
+            # time.sleep(1.5)
+            curr_file_ext = 'excel'
+
+            logger.debug("Done parsing Excel file: %s", link)
+        elif ext == "pdf":
+            logger.debug("Parsing PDF file: %s", link)
+
+            rows = self.pdf_parser.parse(file)
+            curr_file_ext = 'pdf'
+
+            logger.debug("Done parsing PDF file: %s", link)
+
+        if not rows:
+            logger.debug("No rows parsed from %s", link)
+            return []
+
+        for row in rows:
+            if str(row[0]).startswith("Итого") or not row:
+                continue
+
+            try:
+                dog_count = int(row[-1])
+            except (TypeError, ValueError):
+                continue
+
+            if dog_count > 0:
+                obj = self.create_bulletin_obj(row, date)
+                if obj:
+                    bulletins.append(obj)
+
+        # if curr_file_ext == 'pdf':
+        #     self.total_pdf_files += 1
+        # elif curr_file_ext == 'excel':
+        #     self.total_excel_files += 1
+
+        return bulletins
 
     @staticmethod
     def create_bulletin_obj(row: list[str | None], date: datetime) -> BulletinModel | None:

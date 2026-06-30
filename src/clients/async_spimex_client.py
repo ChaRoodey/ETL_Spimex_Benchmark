@@ -36,13 +36,14 @@ class AsyncSpimexClient(BaseSpimexClient):
 
     async def get_file_urls(self, pages: int) -> list[str]:
         logger.info("Fetching started: %d pages", pages)
-        tasks = [self._get_url_by_page(page) for page in range(1, pages + 1)]
+        tasks = [self._get_url_by_page(page) for page in range(40, pages + 41)]
         results = await asyncio.gather(*tasks)
 
         return [link for sublist in results for link in sublist]
 
     async def download_file(self, link: str, retries: int = 3) -> bytes | None:
         logger.debug("Downloading file %s", link)
+        await asyncio.sleep(1.5)
 
         for attempt in range(retries):
             try:

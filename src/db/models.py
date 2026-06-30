@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Index
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -22,5 +22,10 @@ class BulletinModel(Base):
     total: Mapped[int]
     count: Mapped[int]
     date: Mapped[datetime]
-    created_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_on: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+Index("ix_bulletin_id", BulletinModel.id)
+Index("ix_bulletins_exchange_product_name", BulletinModel.exchange_product_name)
+Index("ix_bulletins_delivery_basis_name", BulletinModel.delivery_basis_name)
